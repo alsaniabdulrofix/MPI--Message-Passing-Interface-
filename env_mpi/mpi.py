@@ -1,57 +1,32 @@
+import os
+# Baris di bawah ini opsional, gunakan jika muncul error DLL pada Windows
+# os.add_dll_directory(r"C:\Program Files\Microsoft MPI\Bin")
+
 from mpi4py import MPI
-import time
 
-# 1. Inisialisasi Environment MPI
+# 1. Inisialisasi komunikator
 comm = MPI.COMM_WORLD
-
-# 2. Dapatkan ID Node (rank) dan Total Node (size)
 my_rank = comm.Get_rank()
-total_nodes = comm.Get_size()
 
-def calculate_shortest_path(area_data):
-    """Fungsi tiruan untuk komputasi algoritma routing (misal: OSPF/Dijkstra)"""
-    time.sleep(2) # Simulasi waktu komputasi berat (2 detik)
-    return f"Tabel_Routing_Selesai_Untuk_{area_data}"
+# 2. Menyiapkan variabel di semua node
+shared_data = None
 
-# 3. Logika Master vs Worker
 if my_rank == 0:
-    
-    print("[Master] Memulai simulasi perhitungan routing...")
-    
-    # Menyiapkan data topologi (jumlah area disesuaikan dengan jumlah worker)
-    list_area = [f"Area_Jaringan_{i}" for i in range(1, total_nodes)]
-    
-    # --- FASE DISTRIBUSI ---
-    for worker_id in range(1, total_nodes):
-        # Ambil jatah data untuk worker ini (indeks array mulai dari 0)
-        data_area = list_area[worker_id - 1] 
-        
-        # Mengirim data ke worker dengan tag 1
-        comm.send(data_area, dest=worker_id, tag=1)
-        print(f"[Master] Mengirim data '{data_area}' ke Worker {worker_id}")
-        
-    # --- FASE PENGUMPULAN ---
-    tabel_routing_global = []
-    
-    for worker_id in range(1, total_nodes):
-        # Menerima hasil dari worker dengan tag 2
-        hasil_lokal = comm.recv(source=worker_id, tag=2)
-        tabel_routing_global.append(hasil_lokal)
-        print(f"[Master] Menerima hasil dari Worker {worker_id}: {hasil_lokal}")
-        
-    print("\n[Master] Simulasi Selesai! Hasil Gabungan Tabel Routing:")
-    for hasil in tabel_routing_global:
-        print(f" -> {hasil}")
-
+    # Master mengisi data ke dalam memorinya
+    shared_data = {
+        'informasi_jaringan': 'Config_OSPF_V1',
+        'threshold_latency': 50,
+        'status': 'Aktif'
+    }
+    print(f"[Node {my_rank}] Master menyiapkan data di memori: {shared_data}")
 else:
+    print(f"[Node {my_rank}] Worker menunggu kiriman data dari Master...")
 
-    # Menerima jatah data topologi dari Master
-    data_area_saya = comm.recv(source=0, tag=1)
-    print(f"[Worker {my_rank}] Menerima tugas menghitung {data_area_saya}...")
-    
-    # Melakukan komputasi algoritma secara independen
-    hasil_komputasi = calculate_shortest_path(data_area_saya)
-    print(f"[Worker {my_rank}] Perhitungan selesai, mengirim kembali ke Master.")
-    
-    # Mengirim hasil kembali ke Master
-    comm.send(hasil_komputasi, dest=0, tag=2)
+# 3. Proses 'Sharing' menggunakan Broadcast (bcast)
+# Fungsi ini mengirimkan data dari root (0) ke semua node lainnya
+shared_data = comm.bcast(shared_data, root=0)
+
+# 4. Verifikasi: Semua node sekarang memiliki data yang sama di memori lokalnya
+print(f"[Node {my_rank}] Sekarang memiliki data di memori lokal: {shared_data}")
+
+MPI.Finalize()
