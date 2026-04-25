@@ -15,9 +15,7 @@ def calculate_shortest_path(area_data):
 
 # 3. Logika Master vs Worker
 if my_rank == 0:
-    # ==========================================
-    # TUGAS NODE 0 (MASTER)
-    # ==========================================
+    
     print("[Master] Memulai simulasi perhitungan routing...")
     
     # Menyiapkan data topologi (jumlah area disesuaikan dengan jumlah worker)
@@ -46,9 +44,7 @@ if my_rank == 0:
         print(f" -> {hasil}")
 
 else:
-    # ==========================================
-    # TUGAS NODE WORKER (Rank > 0)
-    # ==========================================
+
     # Menerima jatah data topologi dari Master
     data_area_saya = comm.recv(source=0, tag=1)
     print(f"[Worker {my_rank}] Menerima tugas menghitung {data_area_saya}...")
